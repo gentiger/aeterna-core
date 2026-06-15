@@ -50,10 +50,11 @@ export function buildCoastlines(polys){
 
 // ---------- 道路（貼地）----------
 const ROADS = [
-  [[3,6.2],[1.6,4],[-0.4,1],[-1.8,-1.2],[-2.5,-3],[-3.4,-5],[-4.6,-6.4],[-4.2,-9],[-1.5,-11.5],[-0.5,-12.6]], // 武吉知馬路
-  [[-0.5,-12.6],[0,-14.1]],                                  // 長堤
-  [[4,6.7],[8,5.9],[12,4.3],[15,2.3],[17.3,-1.2]],           // 東海岸路
-  [[3,6.0],[-2,4],[-7,2.5],[-11,0],[-13,-2]],                // 裕廊路
+  [[3,6.2],[1.6,4],[-0.4,1],[-1.8,-1.2],[-2.5,-3],[-3.4,-5],[-4.6,-6.4],[-4.2,-9],[-1.5,-11.5],[-0.5,-12.6]], // Bukit Timah Rd
+  [[4,6.7],[8,5.9],[12,4.3],[15,2.3],[17.3,-1.2]],           // East Coast Rd
+  [[3,6.0],[-2,4],[-7,2.5],[-11,0],[-13,-2]],                // Jurong Rd
+  [[0,-14.2],[-3,-15.6],[-7,-16.4],[-11,-16.8]],             // Johor: to Skudai
+  [[0,-14.2],[4,-15.4],[8,-15.9],[12,-16.3]],                // Johor: to Tebrau
 ];
 export function buildRoads(){
   const g=new THREE.Group(), mat=flatMat(0x9b8a6b,{roughness:0.9});
@@ -234,6 +235,14 @@ export function buildTrees(){
     if(!forest && Math.random()<0.45) continue;
     spots.push([jx,h,jz]);
   }
+  // Johor mainland — jungle & plantation cover
+  for(let x=-26;x<=32;x+=0.7) for(let z=-21;z<=-14.3;z+=0.7){
+    const jx=x+(Math.random()-0.5)*0.6, jz=z+(Math.random()-0.5)*0.6;
+    const h=landHeight(jx,jz);
+    if(h<0.22) continue;
+    if(!isForest(jx,jz) && Math.random()<0.55) continue;
+    spots.push([jx,h,jz]);
+  }
   const N=spots.length;
   const trunks=new THREE.InstancedMesh(new THREE.CylinderGeometry(0.03,0.045,0.26,5),
     new THREE.MeshStandardMaterial({color:0x5b3f28,roughness:1}), N);
@@ -254,10 +263,10 @@ export function buildTrees(){
 
 // ---------- 海岸炮台（朝南）----------
 export const BATTERIES = [
-  { x:18.0, z:-3.2, name:'樟宜炮台',   sub:'CHANGI · 15in 巨炮' },
-  { x:1.5,  z:8.6,  name:'實叻門炮台', sub:'BLAKANG MATI' },
-  { x:-2.6, z:6.3,  name:'拉柏多炮台', sub:'LABRADOR / 花柏山' },
-  { x:-19.0,z:0.6,  name:'西部炮台',   sub:'TUAS' },
+  { x:18.0, z:-3.2, name:'Changi Battery',   sub:'15-inch guns' },
+  { x:1.5,  z:8.6,  name:'Blakang Mati Bty.', sub:'Sentosa' },
+  { x:-2.6, z:6.3,  name:'Labrador Battery',  sub:'Mount Faber' },
+  { x:-19.0,z:0.6,  name:'Tuas Battery',      sub:'West' },
 ];
 export function buildBatteries(){
   const g=new THREE.Group();
@@ -331,8 +340,55 @@ export function buildDefenseLines(){
   return g;
 }
 
+// ---------- The Causeway (raised road+rail embankment over the strait) ----------
+export function buildCauseway(){
+  const g=new THREE.Group();
+  const z0=-12.4, z1=-14.3, len=Math.abs(z1-z0), midz=(z0+z1)/2;
+  // stone embankment
+  const deck=new THREE.Mesh(new THREE.BoxGeometry(1.05,0.34,len),
+    new THREE.MeshStandardMaterial({color:0x8c8378,roughness:0.95}));
+  deck.position.set(0,0.12,midz); g.add(deck);
+  // road carriageway
+  const road=new THREE.Mesh(new THREE.BoxGeometry(0.46,0.05,len),
+    new THREE.MeshStandardMaterial({color:0x403c36,roughness:0.95}));
+  road.position.set(-0.22,0.30,midz); g.add(road);
+  // centreline
+  const cl=new THREE.Mesh(new THREE.BoxGeometry(0.03,0.02,len*0.9),
+    new THREE.MeshStandardMaterial({color:0xd6cba0}));
+  cl.position.set(-0.22,0.33,midz); g.add(cl);
+  // railway
+  const rail=new THREE.Mesh(new THREE.BoxGeometry(0.2,0.05,len),
+    new THREE.MeshStandardMaterial({color:0x6b6256,roughness:0.9}));
+  rail.position.set(0.26,0.30,midz); g.add(rail);
+  for(const rx of [0.19,0.33]){
+    const r=new THREE.Mesh(new THREE.BoxGeometry(0.025,0.03,len),
+      new THREE.MeshStandardMaterial({color:0x2a2620,metalness:0.4,roughness:0.5}));
+    r.position.set(rx,0.34,midz); g.add(r);
+  }
+  // parapets
+  for(const sx of [-0.52,0.52]){
+    const par=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.13,len),
+      new THREE.MeshStandardMaterial({color:0xb8b0a2,roughness:0.9}));
+    par.position.set(sx,0.34,midz); g.add(par);
+  }
+  // lamp posts
+  const postM=new THREE.MeshStandardMaterial({color:0x3a3632});
+  const lampM=new THREE.MeshStandardMaterial({color:0xffe9a8,emissive:0xffcf6a,emissiveIntensity:0.9});
+  for(let i=0;i<=6;i++){
+    const z=z0+(z1-z0)*(i/6);
+    for(const sx of [-0.44,0.44]){
+      const post=new THREE.Mesh(new THREE.CylinderGeometry(0.018,0.018,0.42,6),postM);
+      post.position.set(sx,0.50,z); g.add(post);
+      const lamp=new THREE.Mesh(new THREE.SphereGeometry(0.04,6,6),lampM);
+      lamp.position.set(sx,0.71,z); g.add(lamp);
+    }
+  }
+  return g;
+}
+
 export function buildFeatures(coastlines){
   const g=new THREE.Group();
+  g.add(buildCauseway());
   g.add(buildRoads());
   g.add(buildRailway());
   g.add(buildRivers());

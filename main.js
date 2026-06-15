@@ -116,8 +116,8 @@ function overlayLabel(text, x, z){
   const o = new CSS2DObject(div); o.position.copy(worldPos(x, z, 1.4));
   o.visible = false; scene.add(o); return o;
 }
-const jurLabel = overlayLabel('裕廊—克蘭芝防線', -8.5, -3.5);
-const perLabel = overlayLabel('最後防線・市區周界', 8.2, 3.0);
+const jurLabel = overlayLabel('Jurong–Kranji Line', -8.5, -3.5);
+const perLabel = overlayLabel('Final Perimeter · City', 8.2, 3.0);
 
 // ---------------- 特效 ----------------
 const fireFX = new FireFX(scene);

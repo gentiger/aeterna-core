@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>新加坡保衛戰 1942 — 3D 戰史運鏡 The Battle of Singapore</title>
+<title>Battle of Singapore 1942 — 3D War-History Special</title>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -15,44 +15,44 @@
   <div id="intro">
     <div class="intro-inner">
       <div class="intro-kicker">WAR HISTORY · 3D SPECIAL</div>
-      <h1>新加坡保衛戰</h1>
-      <h2>THE BATTLE OF SINGAPORE</h2>
-      <p class="intro-date">1942 · 2 月 8 日 — 2 月 15 日</p>
-      <p class="intro-sub">日本帝國陸軍第二十五軍　vs　大英國協馬來亞軍<br>
-        山下奉文 「馬來之虎」　vs　亞瑟・帕西瓦爾</p>
+      <h1>BATTLE OF SINGAPORE</h1>
+      <h2>THE FALL OF SINGAPORE · 1942</h2>
+      <p class="intro-date">8 — 15 February 1942</p>
+      <p class="intro-sub">Imperial Japanese 25th Army　vs　British Commonwealth Malaya Command<br>
+        Gen. Yamashita "The Tiger of Malaya"　vs　Lt. Gen. Arthur Percival</p>
       <div class="intro-legend">
-        <span class="lg red">● 日軍 Japanese</span>
-        <span class="lg blue">● 英軍 British / Commonwealth</span>
+        <span class="lg red">● Japanese</span>
+        <span class="lg blue">● British / Commonwealth</span>
       </div>
-      <button id="start-btn">▶　開始播放</button>
-      <p class="intro-hint">滑鼠拖曳旋轉視角 · 滾輪縮放 · 右鍵平移　|　Drag to orbit · Scroll to zoom</p>
+      <button id="start-btn">▶　PLAY</button>
+      <p class="intro-hint">Drag to orbit · Scroll to zoom · Right-drag to pan</p>
     </div>
   </div>
 
   <!-- 載入畫面 -->
-  <div id="loading"><div class="spinner"></div><span>建構戰場地形中…</span></div>
+  <div id="loading"><div class="spinner"></div><span>Building the battlefield…</span></div>
 
   <!-- 頂部標題列 -->
   <header id="topbar" class="hidden">
-    <div class="tb-title">新加坡保衛戰 <span>The Fall of Singapore</span></div>
-    <div class="tb-date" id="hud-date">1942 · 02 · 08</div>
+    <div class="tb-title">Battle of Singapore <span>The Fall of Singapore · 1942</span></div>
+    <div class="tb-date" id="hud-date">8 Feb 1942</div>
   </header>
 
   <!-- 左側資訊面板 -->
   <aside id="info-panel" class="hidden">
-    <div class="ip-phase" id="ip-phase">第一幕</div>
-    <h3 id="ip-title">日軍夜襲登陸</h3>
+    <div class="ip-phase" id="ip-phase">Act I</div>
+    <h3 id="ip-title">Night Landing</h3>
     <p id="ip-desc"></p>
     <div class="ip-events" id="ip-events"></div>
 
     <div class="force-block">
       <div class="force-row">
-        <span class="fr-name red">日軍 第25軍</span>
+        <span class="fr-name red">Japanese · 25th Army</span>
         <span class="fr-num" id="jp-num">36,000</span>
       </div>
       <div class="bar"><div class="bar-fill red" id="jp-bar"></div></div>
       <div class="force-row">
-        <span class="fr-name blue">英聯邦 馬來亞軍</span>
+        <span class="fr-name blue">Commonwealth · Malaya Cmd</span>
         <span class="fr-num" id="uk-num">85,000</span>
       </div>
       <div class="bar"><div class="bar-fill blue" id="uk-bar"></div></div>
@@ -61,37 +61,37 @@
 
   <!-- 右側圖例 / 鏡頭控制 -->
   <aside id="cam-panel" class="hidden">
-    <div class="cp-title">鏡頭 CAMERA</div>
-    <button class="cam-btn" data-cam="overview">🛰 戰場全景</button>
-    <button class="cam-btn" data-cam="landing">⚓ 西北登陸</button>
-    <button class="cam-btn" data-cam="bukit">⛰ 武吉知馬</button>
-    <button class="cam-btn" data-cam="city">🏙 市區防線</button>
-    <button class="cam-btn" data-cam="free">🎮 自由視角</button>
-    <div class="cp-title cp-sep">特效 FX</div>
-    <button class="tog-btn on" id="tog-weather">🌧 天氣</button>
-    <button class="tog-btn on" id="tog-fire">💥 槍炮</button>
-    <button class="tog-btn on" id="tog-cinema">🎬 電影運鏡</button>
-    <button class="tog-btn on" id="tog-labels">🏷 地名</button>
-    <button class="tog-btn on" id="tog-legend">🗺 圖例</button>
+    <div class="cp-title">CAMERA</div>
+    <button class="cam-btn" data-cam="overview">🛰 Overview</button>
+    <button class="cam-btn" data-cam="landing">⚓ NW Landing</button>
+    <button class="cam-btn" data-cam="bukit">⛰ Bukit Timah</button>
+    <button class="cam-btn" data-cam="city">🏙 City Line</button>
+    <button class="cam-btn" data-cam="free">🎮 Free</button>
+    <div class="cp-title cp-sep">EFFECTS</div>
+    <button class="tog-btn on" id="tog-weather">🌧 Weather</button>
+    <button class="tog-btn on" id="tog-fire">💥 Gunfire</button>
+    <button class="tog-btn on" id="tog-cinema">🎬 Cinematic</button>
+    <button class="tog-btn on" id="tog-labels">🏷 Labels</button>
+    <button class="tog-btn on" id="tog-legend">🗺 Legend</button>
   </aside>
 
   <!-- 圖例 -->
   <aside id="legend" class="hidden">
-    <div class="lg-title">圖例 LEGEND</div>
-    <div class="lg-row"><i style="background:#2f5526"></i>叢林 Jungle</div>
-    <div class="lg-row"><i style="background:#566b3c"></i>紅樹林/沼澤 Mangrove</div>
-    <div class="lg-row"><i style="background:#55813c"></i>種植園/草地 Plantation</div>
-    <div class="lg-row"><i style="background:#6f8a44"></i>機場 Airfield</div>
-    <div class="lg-row"><i style="background:#cdbd8e"></i>沙灘 Beach</div>
-    <div class="lg-row"><i style="background:#b3ab9c"></i>市鎮 Town</div>
-    <div class="lg-row"><i style="background:#2c6f8c"></i>水庫/河流 Water</div>
-    <div class="lg-row"><i style="background:#2f8bb0"></i>海 Sea</div>
+    <div class="lg-title">LEGEND</div>
+    <div class="lg-row"><i style="background:#2f5526"></i>Jungle</div>
+    <div class="lg-row"><i style="background:#566b3c"></i>Mangrove / Swamp</div>
+    <div class="lg-row"><i style="background:#55813c"></i>Plantation / Grass</div>
+    <div class="lg-row"><i style="background:#6f8a44"></i>Airfield</div>
+    <div class="lg-row"><i style="background:#cdbd8e"></i>Beach</div>
+    <div class="lg-row"><i style="background:#b3ab9c"></i>Town</div>
+    <div class="lg-row"><i style="background:#2c6f8c"></i>Reservoir / River</div>
+    <div class="lg-row"><i style="background:#2f8bb0"></i>Sea</div>
     <div class="lg-sep"></div>
-    <div class="lg-row"><i class="ln" style="background:#504a42"></i>道路 Road</div>
-    <div class="lg-row"><i class="ln" style="background:#8a7f6c"></i>鐵路 Railway</div>
-    <div class="lg-row"><i class="ln" style="background:#eef3f8"></i>海岸線 Coast</div>
-    <div class="lg-row"><span class="mk">⌖</span>海岸炮台 Battery</div>
-    <div class="lg-row"><span class="mk">▪</span>北岸碉堡 Pillbox</div>
+    <div class="lg-row"><i class="ln" style="background:#9b8a6b"></i>Road</div>
+    <div class="lg-row"><i class="ln" style="background:#8a7f6c"></i>Railway</div>
+    <div class="lg-row"><i class="ln" style="background:#eef3f8"></i>Coastline</div>
+    <div class="lg-row"><span class="mk">⌖</span>Coastal Battery</div>
+    <div class="lg-row"><span class="mk">▪</span>Pillbox Line</div>
   </aside>
 
   <!-- 指南針 -->
@@ -106,11 +106,11 @@
   <!-- 底部時間軸 -->
   <footer id="timeline" class="hidden">
     <div class="tl-controls">
-      <button id="btn-prev" title="上一幕">⏮</button>
-      <button id="btn-play" title="播放/暫停">⏸</button>
-      <button id="btn-next" title="下一幕">⏭</button>
+      <button id="btn-prev" title="Previous act">⏮</button>
+      <button id="btn-play" title="Play / Pause">⏸</button>
+      <button id="btn-next" title="Next act">⏭</button>
       <div class="speed">
-        <span>速度</span>
+        <span>Speed</span>
         <input type="range" id="speed" min="0.25" max="2.5" step="0.25" value="1" />
       </div>
     </div>
