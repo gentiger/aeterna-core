@@ -2,7 +2,7 @@
 //  地圖要素 — 海岸線、機場跑道、城鎮市區、主要道路
 // ============================================================
 import * as THREE from 'three';
-import { landHeight } from './terrain.js';
+import { landHeight, isForest, nearAirfield } from './terrain.js';
 
 const gy = (x,z)=> Math.max(landHeight(x,z), 0.02);
 const rad = THREE.MathUtils.degToRad;
@@ -133,11 +133,92 @@ export function buildRoads(){
   return g;
 }
 
+// ---------- 河流 ----------
+const RIVERS = [
+  [[3.2,6.6],[2.6,5.4],[2.2,4.6]],                  // 新加坡河
+  [[7.0,5.6],[6.2,3.8],[5.6,2.2],[5.0,0.6]],        // 加冷河
+  [[-5.0,-11.2],[-5.2,-9.5],[-4.6,-8.0]],           // 克蘭芝河
+  [[-11.0,3.4],[-11.2,1.6],[-10.6,0.0]],            // 裕廊河
+  [[3.0,-9.2],[3.2,-7.8],[3.4,-6.6]],               // 實里達河
+  [[-13.0,-9.5],[-12.5,-8.0],[-11.5,-7.0]],         // 雙溪布洛
+];
+export function buildRivers(){
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color:0x2f6f8c, roughness:0.4, metalness:0.2 });
+  for(const r of RIVERS){
+    const pts = r.map(([x,z])=> new THREE.Vector3(x, gy(x,z)+0.045, z));
+    const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.4);
+    const tube = new THREE.TubeGeometry(curve, r.length*10, 0.13, 5, false);
+    g.add(new THREE.Mesh(tube, mat));
+  }
+  return g;
+}
+
+// ---------- 叢林樹冠 ----------
+export function buildTrees(){
+  const spots = [];
+  for(let x=-20;x<=20;x+=0.5){
+    for(let z=-13;z<=8;z+=0.5){
+      const jx=x+(Math.random()-0.5)*0.45, jz=z+(Math.random()-0.5)*0.45;
+      const h=landHeight(jx,jz);
+      if(h<0.25 || nearAirfield(jx,jz)) continue;
+      const forest=isForest(jx,jz);
+      if(!(forest || h>0.95)) continue;
+      if(!forest && Math.random()<0.45) continue;     // 山坡較疏
+      spots.push([jx,h,jz]);
+    }
+  }
+  const N=spots.length;
+  const trunks   = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.03,0.045,0.26,5),
+    new THREE.MeshStandardMaterial({ color:0x5b3f28, roughness:1 }), N);
+  const canopies = new THREE.InstancedMesh(new THREE.ConeGeometry(0.17,0.55,6),
+    new THREE.MeshStandardMaterial({ roughness:0.9 }), N);
+  const d=new THREE.Object3D(), col=new THREE.Color();
+  const greens=[0x2f5526,0x356129,0x274a20,0x3d6b2e];
+  spots.forEach(([x,h,z],i)=>{
+    const s=0.7+Math.random()*0.9;
+    d.rotation.y=Math.random()*6.28;
+    d.position.set(x,h+0.13*s,z); d.scale.set(s,s,s); d.updateMatrix();
+    trunks.setMatrixAt(i,d.matrix);
+    d.position.set(x,h+0.48*s,z); d.updateMatrix();
+    canopies.setMatrixAt(i,d.matrix);
+    canopies.setColorAt(i,col.setHex(greens[(Math.random()*greens.length)|0]));
+  });
+  trunks.instanceMatrix.needsUpdate=true; canopies.instanceMatrix.needsUpdate=true;
+  if(canopies.instanceColor) canopies.instanceColor.needsUpdate=true;
+  const g=new THREE.Group(); g.add(trunks,canopies); return g;
+}
+
+// ---------- 海岸炮台（朝南——著名的「炮口錯向」）----------
+export const BATTERIES = [
+  { x:18.0, z:-3.2, name:'樟宜炮台',   sub:'CHANGI · 15in 巨炮' },
+  { x:1.5,  z:8.6,  name:'實叻門炮台', sub:'BLAKANG MATI' },
+  { x:-2.6, z:6.3,  name:'拉柏多炮台', sub:'LABRADOR / 花柏山' },
+  { x:-19.0,z:0.6,  name:'西部炮台',   sub:'TUAS' },
+];
+export function buildBatteries(){
+  const g = new THREE.Group();
+  const baseM = new THREE.MeshStandardMaterial({ color:0x3a3a3a, roughness:0.9 });
+  const gunM  = new THREE.MeshStandardMaterial({ color:0x20242a, roughness:0.5, metalness:0.5 });
+  for(const b of BATTERIES){
+    const y=gy(b.x,b.z);
+    const base=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.55,0.2,6), baseM);
+    base.position.set(b.x,y+0.1,b.z); g.add(base);
+    const barrel=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,1.0,8), gunM);
+    barrel.rotation.x=Math.PI/2;            // 朝南（+z）
+    barrel.position.set(b.x,y+0.28,b.z+0.4); g.add(barrel);
+  }
+  return g;
+}
+
 export function buildFeatures(coastlines){
   const g = new THREE.Group();
   g.add(buildRoads());
+  g.add(buildRivers());
   g.add(buildRunways());
   g.add(buildUrban());
+  g.add(buildTrees());
+  g.add(buildBatteries());
   g.add(buildCoastlines(coastlines));
   return g;
 }

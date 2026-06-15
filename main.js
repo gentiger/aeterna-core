@@ -6,7 +6,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { PLACES, UNITS, PHASES, JP, UK } from './data.js';
 import { buildTerrain, animateWater, landHeight, COASTLINES } from './terrain.js';
-import { buildFeatures } from './features.js';
+import { buildFeatures, BATTERIES } from './features.js';
 import { makeFlagTexture } from './emblems.js';
 import { FireFX, WeatherFX } from './effects.js';
 
@@ -38,6 +38,7 @@ controls.maxPolarAngle = Math.PI*0.49;
 controls.minDistance = 8;
 controls.maxDistance = 160;
 controls.target.set(-1, 0, -2);
+const compassRing = document.querySelector('#compass .cmp-ring');
 
 // ---------------- 燈光 ----------------
 const lights = {};
@@ -74,6 +75,34 @@ for(const p of PLACES){
   scene.add(obj);
   placeLabels.push(obj);
 }
+
+// 海岸炮台標籤
+for(const b of BATTERIES){
+  const div = document.createElement('div');
+  div.className = 'place-label battery';
+  div.innerHTML = `⌖ ${b.name}<span class="sub">${b.sub}</span>`;
+  const obj = new CSS2DObject(div);
+  obj.position.copy(worldPos(b.x, b.z, 1.0));
+  scene.add(obj); placeLabels.push(obj);
+}
+
+// 比例尺（10 公里）
+(function addScaleBar(){
+  const g = new THREE.Group();
+  const x0=-10, z0=12.5, len=10;
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(len,0.05,0.16),
+    new THREE.MeshBasicMaterial({color:0xffffff})).translateX(x0+len/2).translateY(0.12).translateZ(z0));
+  for(let i=0;i<len;i+=2){
+    const seg=new THREE.Mesh(new THREE.BoxGeometry(1,0.06,0.18),
+      new THREE.MeshBasicMaterial({color:0x111111}));
+    seg.position.set(x0+i+0.5,0.13,z0); g.add(seg);
+  }
+  [['0',0],['5',5],['10 km',10]].forEach(([t,d])=>{
+    const div=document.createElement('div'); div.className='place-label'; div.textContent=t;
+    const o=new CSS2DObject(div); o.position.set(x0+d,0.5,z0+0.7); g.add(o);
+  });
+  scene.add(g);
+})();
 
 // ---------------- 特效 ----------------
 const fireFX = new FireFX(scene);
@@ -258,7 +287,7 @@ toggle('tog-labels',  v=>{ labelsOn=v; placeLabels.forEach(o=>o.visible=v); });
 // ---------------- 開場 ----------------
 $('start-btn').onclick = ()=>{
   $('intro').classList.add('gone');
-  ['topbar','info-panel','cam-panel','timeline'].forEach(id=> $(id).classList.remove('hidden'));
+  ['topbar','info-panel','cam-panel','timeline','compass'].forEach(id=> $(id).classList.remove('hidden'));
   setCam('overview');
   setPlaying(true);
 };
@@ -378,6 +407,8 @@ function animate(){
   }
 
   controls.update();
+  // 指南針：依鏡頭方位旋轉
+  if(compassRing) compassRing.style.transform = `rotate(${-controls.getAzimuthalAngle()}rad)`;
   renderer.render(scene, camera);
   labelRenderer.render(scene, camera);
 }

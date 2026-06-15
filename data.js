@@ -30,6 +30,8 @@ export const PLACES = [
   { name:'聖淘沙島', sub:'SENTOSA · P. BLAKANG MATI', x:1.5, z:8.7 },
   { name:'烏敏島', sub:'PULAU UBIN', x:14, z:-11.4 },
   { name:'中央集水區', sub:'CENTRAL CATCHMENT', x:0.3, z:-4.6 },
+  { name:'新加坡河', sub:'SINGAPORE R.', x:2.3, z:5.0 },
+  { name:'加冷河', sub:'KALLANG R.', x:5.9, z:2.6 },
 ];
 
 // 軍/陣型 顏色
