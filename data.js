@@ -32,6 +32,7 @@ export const PLACES = [
   { name:'中央集水區', sub:'CENTRAL CATCHMENT', x:0.3, z:-4.6 },
   { name:'新加坡河', sub:'SINGAPORE R.', x:2.3, z:5.0 },
   { name:'加冷河', sub:'KALLANG R.', x:5.9, z:2.6 },
+  { name:'丹戎巴葛車站', sub:'TANJONG PAGAR · KTM 鐵路終點', x:1.6, z:7.3 },
 ];
 
 // 軍/陣型 顏色

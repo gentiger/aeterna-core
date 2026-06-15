@@ -1,11 +1,38 @@
 // ============================================================
-//  地圖要素 — 海岸線、機場跑道、城鎮市區、主要道路
+//  地圖要素 — 海岸線、道路/鐵路、河流、跑道、低層市鎮、種植園、
+//  叢林樹冠、海岸炮台、北岸碉堡線、等高線
 // ============================================================
 import * as THREE from 'three';
 import { landHeight, isForest, nearAirfield } from './terrain.js';
 
 const gy = (x,z)=> Math.max(landHeight(x,z), 0.02);
 const rad = THREE.MathUtils.degToRad;
+
+// ---------- 共用：貼地扁平帶（道路/河流/鐵路）----------
+function ribbon(path, width, mat, lift=0.05, seg=12){
+  const pts = path.map(([x,z])=> new THREE.Vector3(x,0,z));
+  const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.4);
+  const N = Math.max(2, (path.length-1)*seg);
+  const position=[], index=[];
+  const up = new THREE.Vector3(0,1,0), side = new THREE.Vector3(), tan = new THREE.Vector3();
+  for(let i=0;i<=N;i++){
+    const t=i/N, p=curve.getPoint(t);
+    curve.getTangent(t,tan); tan.y=0; tan.normalize();
+    side.crossVectors(up,tan).normalize().multiplyScalar(width/2);
+    const lx=p.x-side.x, lz=p.z-side.z, rx=p.x+side.x, rz=p.z+side.z;
+    position.push(lx, gy(lx,lz)+lift, lz,  rx, gy(rx,rz)+lift, rz);
+    if(i<N){ const a=i*2; index.push(a,a+1,a+2, a+1,a+3,a+2); }
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(position,3));
+  geo.setIndex(index); geo.computeVertexNormals();
+  return new THREE.Mesh(geo, mat);
+}
+function flatMat(color, opts={}){
+  return new THREE.MeshStandardMaterial(Object.assign({
+    color, roughness:0.95, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2
+  }, opts));
+}
 
 // ---------- 海岸線描邊 ----------
 export function buildCoastlines(polys){
@@ -15,173 +42,200 @@ export function buildCoastlines(polys){
   for(const poly of polys){
     const pts = poly.map(([x,z])=> new THREE.Vector3(x, gy(x,z)+0.07, z));
     const curve = new THREE.CatmullRomCurve3(pts, true, 'catmullrom', 0.5);
-    const tube = new THREE.TubeGeometry(curve, poly.length*8, 0.12, 6, true);
+    const tube = new THREE.TubeGeometry(curve, poly.length*8, 0.07, 6, true);
     g.add(new THREE.Mesh(tube, mat));
   }
   return g;
 }
 
+// ---------- 道路（貼地）----------
+const ROADS = [
+  [[3,6.2],[1.6,4],[-0.4,1],[-1.8,-1.2],[-2.5,-3],[-3.4,-5],[-4.6,-6.4],[-4.2,-9],[-1.5,-11.5],[-0.5,-12.6]], // 武吉知馬路
+  [[-0.5,-12.6],[0,-14.1]],                                  // 長堤
+  [[4,6.7],[8,5.9],[12,4.3],[15,2.3],[17.3,-1.2]],           // 東海岸路
+  [[3,6.0],[-2,4],[-7,2.5],[-11,0],[-13,-2]],                // 裕廊路
+];
+export function buildRoads(){
+  const g=new THREE.Group(), mat=flatMat(0x504a42);
+  for(const r of ROADS) g.add(ribbon(r, 0.28, mat, 0.05));
+  return g;
+}
+
+// ---------- 鐵路（KTM 線 → 丹戎巴葛）----------
+const RAIL = [[-0.5,-12.5],[-1.6,-9.5],[-2.8,-6],[-2.6,-3.2],[-1.2,0.5],[0.4,3.6],[1.4,5.6],[2.0,7.0]];
+export function buildRailway(){
+  const g=new THREE.Group();
+  g.add(ribbon(RAIL, 0.16, flatMat(0x6b6256), 0.055));        // 路基
+  // 枕木
+  const pts=RAIL.map(([x,z])=>new THREE.Vector3(x,0,z));
+  const curve=new THREE.CatmullRomCurve3(pts,false,'catmullrom',0.4);
+  const tieMat=new THREE.MeshStandardMaterial({color:0x2c2620,roughness:1,
+    polygonOffset:true,polygonOffsetFactor:-3});
+  const M=120;
+  for(let i=0;i<=M;i++){
+    const t=i/M, p=curve.getPoint(t), tan=curve.getTangent(t); tan.y=0; tan.normalize();
+    const tie=new THREE.Mesh(new THREE.PlaneGeometry(0.34,0.07), tieMat);
+    tie.rotation.x=-Math.PI/2; tie.rotation.z=Math.atan2(tan.x,tan.z);
+    tie.position.set(p.x, gy(p.x,p.z)+0.06, p.z); g.add(tie);
+  }
+  return g;
+}
+
+// ---------- 河流（貼地）----------
+const RIVERS = [
+  [[3.2,6.6],[2.6,5.4],[2.2,4.6]], [[7.0,5.6],[6.2,3.8],[5.6,2.2],[5.0,0.6]],
+  [[-5.0,-11.2],[-5.2,-9.5],[-4.6,-8.0]], [[-11.0,3.4],[-11.2,1.6],[-10.6,0.0]],
+  [[3.0,-9.2],[3.2,-7.8],[3.4,-6.6]], [[-13.0,-9.5],[-12.5,-8.0],[-11.5,-7.0]],
+];
+export function buildRivers(){
+  const g=new THREE.Group(), mat=flatMat(0x2f6f8c,{roughness:0.4,metalness:0.2});
+  for(const r of RIVERS) g.add(ribbon(r, 0.3, mat, 0.045));
+  return g;
+}
+
 // ---------- 機場跑道 ----------
 const RUNWAYS = [
-  { x:-9.0, z:-6.6, a:30,  len:3.2, w:0.34 },   // 登加機場 主跑道
-  { x:-9.0, z:-6.6, a:120, len:2.2, w:0.32 },   // 登加機場 副跑道
-  { x:3.2,  z:-8.9, a:65,  len:2.4, w:0.32 },   // 實里達機場
-  { x:5.3,  z:-10.6,a:100, len:2.0, w:0.30 },   // 三巴旺機場
-  { x:7.0,  z:5.7,  a:55,  len:2.6, w:0.32 },   // 加冷機場
+  { x:-9.0, z:-6.6, a:30,  len:3.2, w:0.34 },{ x:-9.0, z:-6.6, a:120, len:2.2, w:0.32 },
+  { x:3.2,  z:-8.9, a:65,  len:2.4, w:0.32 },{ x:5.3,  z:-10.6,a:100, len:2.0, w:0.30 },
+  { x:7.0,  z:5.7,  a:55,  len:2.6, w:0.32 },
 ];
 export function buildRunways(){
-  const g = new THREE.Group();
-  const asphalt = new THREE.MeshStandardMaterial({ color:0x26282c, roughness:0.95 });
-  const paint   = new THREE.MeshStandardMaterial({ color:0xd2d6db, roughness:0.6 });
+  const g=new THREE.Group();
+  const asphalt=new THREE.MeshStandardMaterial({color:0x26282c,roughness:0.95});
+  const paint=new THREE.MeshStandardMaterial({color:0xd2d6db,roughness:0.6});
   for(const r of RUNWAYS){
-    const grp = new THREE.Group();
-    grp.position.set(r.x, gy(r.x,r.z)+0.04, r.z);
-    grp.rotation.y = rad(r.a);
-    const strip = new THREE.Mesh(new THREE.PlaneGeometry(r.len, r.w), asphalt);
-    strip.rotation.x = -Math.PI/2; grp.add(strip);
-    // 中線虛線
-    const n = Math.max(4, Math.floor(r.len/0.38));
+    const grp=new THREE.Group();
+    grp.position.set(r.x, gy(r.x,r.z)+0.04, r.z); grp.rotation.y=rad(r.a);
+    const strip=new THREE.Mesh(new THREE.PlaneGeometry(r.len,r.w),asphalt);
+    strip.rotation.x=-Math.PI/2; grp.add(strip);
+    const n=Math.max(4,Math.floor(r.len/0.38));
     for(let i=0;i<n;i++){
-      const d = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.035), paint);
-      d.rotation.x = -Math.PI/2;
-      d.position.set((i/(n-1)-0.5)*r.len*0.9, 0.012, 0);
-      grp.add(d);
-    }
-    // 兩端門檻
-    for(const s of [-1,1]){
-      const t = new THREE.Mesh(new THREE.PlaneGeometry(0.12, r.w*0.8), paint);
-      t.rotation.x = -Math.PI/2;
-      t.position.set(s*r.len*0.46, 0.012, 0);
-      grp.add(t);
+      const d=new THREE.Mesh(new THREE.PlaneGeometry(0.17,0.035),paint);
+      d.rotation.x=-Math.PI/2; d.position.set((i/(n-1)-0.5)*r.len*0.9,0.012,0); grp.add(d);
     }
     g.add(grp);
   }
   return g;
 }
 
-// ---------- 城鎮 / 市區建築群 ----------
-const URBAN = [
-  { x:3.6,  z:6.6,  rx:2.7, rz:1.7, n:120, hmax:1.5, patch:0x6c655a }, // 新加坡市區
-  { x:7.2,  z:5.4,  rx:1.3, rz:1.0, n:30,  hmax:0.8, patch:0x67615a }, // 加冷／芽籠
-  { x:-12.0,z:-1.2, rx:1.2, rz:1.2, n:18,  hmax:0.7 },                  // 裕廊村
-  { x:-5.5, z:4.4,  rx:1.1, rz:0.8, n:16,  hmax:0.7 },                  // 巴西班讓村
-  { x:-0.5, z:-15.8,rx:3.2, rz:1.1, n:55,  hmax:1.0, patch:0x655f56 },  // 柔佛巴魯
+// ---------- 低層市鎮（1942：店屋、低矮殖民建築，無高樓）----------
+const TOWNS = [
+  { x:3.6, z:6.7, rx:2.6, rz:1.7, patch:0x6c655a, civic:true }, // 新加坡市區
+  { x:7.0, z:5.4, rx:1.2, rz:0.9, patch:0x67615a },             // 加冷／芽籠
+  { x:-12.0,z:-1.2,rx:1.0, rz:1.0 },                             // 裕廊村
+  { x:-5.5,z:4.4, rx:1.0, rz:0.7 },                              // 巴西班讓村
+  { x:-0.5,z:-15.8,rx:3.0,rz:1.1, patch:0x655f56 },              // 柔佛巴魯
 ];
-export function buildUrban(){
-  const g = new THREE.Group();
-  const palette = [0x9a958c,0xb3ab9c,0x8a8278,0xc2b2a0,0x7d7a74,0xa89c88];
-  const col = new THREE.Color(), dummy = new THREE.Object3D();
-  for(const c of URBAN){
-    // 市區地坪
-    if(c.patch){
-      const patch = new THREE.Mesh(
-        new THREE.CircleGeometry(1,40),
-        new THREE.MeshStandardMaterial({ color:c.patch, roughness:1.0,
-          transparent:true, opacity:0.9 }));
-      patch.rotation.x = -Math.PI/2;
-      patch.scale.set(c.rx*1.15, c.rz*1.15, 1);
-      patch.position.set(c.x, gy(c.x,c.z)+0.03, c.z);
-      g.add(patch);
+export function buildTowns(){
+  const g=new THREE.Group();
+  const walls=[0xe7ddc8,0xd9c3a0,0xc9a489,0xcf8a6c,0xbfae93,0xd6c7ab];
+  const placements=[]; const civic=[];
+  for(const t of TOWNS){
+    if(t.patch){
+      const patch=new THREE.Mesh(new THREE.CircleGeometry(1,40),
+        new THREE.MeshStandardMaterial({color:t.patch,roughness:1,transparent:true,opacity:0.9}));
+      patch.rotation.x=-Math.PI/2; patch.scale.set(t.rx*1.15,t.rz*1.15,1);
+      patch.position.set(t.x,gy(t.x,t.z)+0.03,t.z); g.add(patch);
     }
-    const inst = new THREE.InstancedMesh(
-      new THREE.BoxGeometry(1,1,1),
-      new THREE.MeshStandardMaterial({ roughness:0.85 }), c.n);
-    let k=0;
-    for(let i=0;i<c.n;i++){
-      const ang = Math.random()*Math.PI*2, rr = Math.sqrt(Math.random());
-      const x = c.x + Math.cos(ang)*rr*c.rx;
-      const z = c.z + Math.sin(ang)*rr*c.rz;
-      const yg = gy(x,z);
-      if(yg < 0.07) continue;                      // 落在水上則跳過
-      const w = 0.16+Math.random()*0.26, d = 0.16+Math.random()*0.26;
-      const h = 0.22+Math.random()*c.hmax;
-      dummy.position.set(x, yg+h/2, z);
-      dummy.rotation.y = Math.random()*Math.PI;
-      dummy.scale.set(w,h,d); dummy.updateMatrix();
-      inst.setMatrixAt(k, dummy.matrix);
-      inst.setColorAt(k, col.setHex(palette[(Math.random()*palette.length)|0]));
-      k++;
+    // 規則網格排列的店屋
+    const step=0.26;
+    for(let ix=-t.rx; ix<=t.rx; ix+=step){
+      for(let iz=-t.rz; iz<=t.rz; iz+=step){
+        if((ix/t.rx)**2+(iz/t.rz)**2 > 1) continue;
+        const x=t.x+ix+(Math.random()-0.5)*0.08, z=t.z+iz+(Math.random()-0.5)*0.08;
+        const yg=gy(x,z); if(yg<0.07) continue;
+        if(Math.random()<0.25) continue;                 // 街巷留白
+        placements.push([x,yg,z]);
+      }
     }
-    inst.count = k;
-    inst.instanceMatrix.needsUpdate = true;
-    if(inst.instanceColor) inst.instanceColor.needsUpdate = true;
-    g.add(inst);
+    if(t.civic){ // 幾棟殖民地標（仍屬低矮）
+      for(let i=0;i<6;i++) civic.push([t.x+(Math.random()-0.5)*3, gy(t.x,t.z), t.z+(Math.random()-0.5)*1.6]);
+    }
+  }
+  // 店屋（2–3 層，低矮）
+  const N=placements.length;
+  const inst=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),
+    new THREE.MeshStandardMaterial({roughness:0.9}), N);
+  const d=new THREE.Object3D(), col=new THREE.Color();
+  placements.forEach(([x,yg,z],i)=>{
+    const w=0.16+Math.random()*0.08, dep=0.16+Math.random()*0.08;
+    const h=0.10+Math.random()*0.10;                    // 低層
+    d.position.set(x,yg+h/2,z); d.rotation.y=(Math.random()<0.5?0:Math.PI/2)+(Math.random()-0.5)*0.2;
+    d.scale.set(w,h,dep); d.updateMatrix(); inst.setMatrixAt(i,d.matrix);
+    inst.setColorAt(i,col.setHex(walls[(Math.random()*walls.length)|0]));
+  });
+  inst.instanceMatrix.needsUpdate=true; if(inst.instanceColor) inst.instanceColor.needsUpdate=true;
+  g.add(inst);
+  // 殖民地標（略高、白色）
+  if(civic.length){
+    const ci=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),
+      new THREE.MeshStandardMaterial({color:0xeae6da,roughness:0.8}), civic.length);
+    civic.forEach(([x,yg,z],i)=>{
+      const h=0.26+Math.random()*0.12;
+      d.position.set(x,yg+h/2,z); d.rotation.y=Math.random()*Math.PI;
+      d.scale.set(0.3,h,0.3); d.updateMatrix(); ci.setMatrixAt(i,d.matrix);
+    });
+    ci.instanceMatrix.needsUpdate=true; g.add(ci);
   }
   return g;
 }
 
-// ---------- 主要道路 ----------
-const ROADS = [
-  // 武吉知馬路（日軍主攻軸線：市區 → 武吉知馬 → 武吉班讓 → 長堤）
-  [[3,6.2],[1.6,4],[-0.4,1],[-1.8,-1.2],[-2.5,-3],[-3.4,-5],[-4.6,-6.4],[-4.2,-9],[-1.5,-11.5],[-0.5,-12.6]],
-  // 長堤道路
-  [[-0.5,-12.6],[0,-14.1]],
-  // 東海岸路
-  [[4,6.7],[8,5.9],[12,4.3],[15,2.3],[17.3,-1.2]],
-  // 裕廊路（西部）
-  [[3,6.0],[-2,4],[-7,2.5],[-11,0],[-13,-2]],
+// ---------- 橡膠種植園（成排）----------
+const PLANTATIONS = [
+  { x:-14,z:-2.5, rx:2.6, rz:2.6 }, { x:-7,z:-8, rx:2.2, rz:1.4 },
+  { x:10,z:-1, rx:3.0, rz:2.4 },    { x:13,z:2, rx:2.0, rz:1.6 },
 ];
-export function buildRoads(){
-  const g = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ color:0x47433d, roughness:0.95 });
-  for(const r of ROADS){
-    const pts = r.map(([x,z])=> new THREE.Vector3(x, gy(x,z)+0.05, z));
-    const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.4);
-    const tube = new THREE.TubeGeometry(curve, r.length*10, 0.09, 5, false);
-    g.add(new THREE.Mesh(tube, mat));
+export function buildPlantations(){
+  const spots=[];
+  for(const p of PLANTATIONS){
+    for(let ix=-p.rx; ix<=p.rx; ix+=0.42){        // 行距
+      for(let iz=-p.rz; iz<=p.rz; iz+=0.32){      // 株距
+        if((ix/p.rx)**2+(iz/p.rz)**2 > 1) continue;
+        const x=p.x+ix+(Math.random()-0.5)*0.05, z=p.z+iz+(Math.random()-0.5)*0.05;
+        const h=landHeight(x,z);
+        if(h<0.2 || h>0.9 || nearAirfield(x,z) || isForest(x,z)) continue;
+        spots.push([x,h,z]);
+      }
+    }
   }
-  return g;
-}
-
-// ---------- 河流 ----------
-const RIVERS = [
-  [[3.2,6.6],[2.6,5.4],[2.2,4.6]],                  // 新加坡河
-  [[7.0,5.6],[6.2,3.8],[5.6,2.2],[5.0,0.6]],        // 加冷河
-  [[-5.0,-11.2],[-5.2,-9.5],[-4.6,-8.0]],           // 克蘭芝河
-  [[-11.0,3.4],[-11.2,1.6],[-10.6,0.0]],            // 裕廊河
-  [[3.0,-9.2],[3.2,-7.8],[3.4,-6.6]],               // 實里達河
-  [[-13.0,-9.5],[-12.5,-8.0],[-11.5,-7.0]],         // 雙溪布洛
-];
-export function buildRivers(){
-  const g = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ color:0x2f6f8c, roughness:0.4, metalness:0.2 });
-  for(const r of RIVERS){
-    const pts = r.map(([x,z])=> new THREE.Vector3(x, gy(x,z)+0.045, z));
-    const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.4);
-    const tube = new THREE.TubeGeometry(curve, r.length*10, 0.13, 5, false);
-    g.add(new THREE.Mesh(tube, mat));
-  }
-  return g;
+  const N=spots.length;
+  const trunks=new THREE.InstancedMesh(new THREE.CylinderGeometry(0.02,0.03,0.2,4),
+    new THREE.MeshStandardMaterial({color:0x6b5236,roughness:1}), N);
+  const canopy=new THREE.InstancedMesh(new THREE.SphereGeometry(0.12,6,5),
+    new THREE.MeshStandardMaterial({color:0x4f7e3a,roughness:0.9}), N);
+  const d=new THREE.Object3D();
+  spots.forEach(([x,h,z],i)=>{
+    d.position.set(x,h+0.1,z); d.scale.setScalar(0.8+Math.random()*0.3); d.updateMatrix();
+    trunks.setMatrixAt(i,d.matrix);
+    d.position.set(x,h+0.26,z); d.updateMatrix(); canopy.setMatrixAt(i,d.matrix);
+  });
+  trunks.instanceMatrix.needsUpdate=true; canopy.instanceMatrix.needsUpdate=true;
+  const g=new THREE.Group(); g.add(trunks,canopy); return g;
 }
 
 // ---------- 叢林樹冠 ----------
 export function buildTrees(){
-  const spots = [];
-  for(let x=-20;x<=20;x+=0.5){
-    for(let z=-13;z<=8;z+=0.5){
-      const jx=x+(Math.random()-0.5)*0.45, jz=z+(Math.random()-0.5)*0.45;
-      const h=landHeight(jx,jz);
-      if(h<0.25 || nearAirfield(jx,jz)) continue;
-      const forest=isForest(jx,jz);
-      if(!(forest || h>0.95)) continue;
-      if(!forest && Math.random()<0.45) continue;     // 山坡較疏
-      spots.push([jx,h,jz]);
-    }
+  const spots=[];
+  for(let x=-20;x<=20;x+=0.5) for(let z=-13;z<=8;z+=0.5){
+    const jx=x+(Math.random()-0.5)*0.45, jz=z+(Math.random()-0.5)*0.45;
+    const h=landHeight(jx,jz);
+    if(h<0.25 || nearAirfield(jx,jz)) continue;
+    const forest=isForest(jx,jz);
+    if(!(forest || h>0.95)) continue;
+    if(!forest && Math.random()<0.45) continue;
+    spots.push([jx,h,jz]);
   }
   const N=spots.length;
-  const trunks   = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.03,0.045,0.26,5),
-    new THREE.MeshStandardMaterial({ color:0x5b3f28, roughness:1 }), N);
-  const canopies = new THREE.InstancedMesh(new THREE.ConeGeometry(0.17,0.55,6),
-    new THREE.MeshStandardMaterial({ roughness:0.9 }), N);
+  const trunks=new THREE.InstancedMesh(new THREE.CylinderGeometry(0.03,0.045,0.26,5),
+    new THREE.MeshStandardMaterial({color:0x5b3f28,roughness:1}), N);
+  const canopies=new THREE.InstancedMesh(new THREE.ConeGeometry(0.17,0.55,6),
+    new THREE.MeshStandardMaterial({roughness:0.9}), N);
   const d=new THREE.Object3D(), col=new THREE.Color();
   const greens=[0x2f5526,0x356129,0x274a20,0x3d6b2e];
   spots.forEach(([x,h,z],i)=>{
-    const s=0.7+Math.random()*0.9;
-    d.rotation.y=Math.random()*6.28;
-    d.position.set(x,h+0.13*s,z); d.scale.set(s,s,s); d.updateMatrix();
-    trunks.setMatrixAt(i,d.matrix);
-    d.position.set(x,h+0.48*s,z); d.updateMatrix();
-    canopies.setMatrixAt(i,d.matrix);
+    const s=0.7+Math.random()*0.9; d.rotation.y=Math.random()*6.28;
+    d.position.set(x,h+0.13*s,z); d.scale.set(s,s,s); d.updateMatrix(); trunks.setMatrixAt(i,d.matrix);
+    d.position.set(x,h+0.48*s,z); d.updateMatrix(); canopies.setMatrixAt(i,d.matrix);
     canopies.setColorAt(i,col.setHex(greens[(Math.random()*greens.length)|0]));
   });
   trunks.instanceMatrix.needsUpdate=true; canopies.instanceMatrix.needsUpdate=true;
@@ -189,7 +243,7 @@ export function buildTrees(){
   const g=new THREE.Group(); g.add(trunks,canopies); return g;
 }
 
-// ---------- 海岸炮台（朝南——著名的「炮口錯向」）----------
+// ---------- 海岸炮台（朝南）----------
 export const BATTERIES = [
   { x:18.0, z:-3.2, name:'樟宜炮台',   sub:'CHANGI · 15in 巨炮' },
   { x:1.5,  z:8.6,  name:'實叻門炮台', sub:'BLAKANG MATI' },
@@ -197,28 +251,61 @@ export const BATTERIES = [
   { x:-19.0,z:0.6,  name:'西部炮台',   sub:'TUAS' },
 ];
 export function buildBatteries(){
-  const g = new THREE.Group();
-  const baseM = new THREE.MeshStandardMaterial({ color:0x3a3a3a, roughness:0.9 });
-  const gunM  = new THREE.MeshStandardMaterial({ color:0x20242a, roughness:0.5, metalness:0.5 });
+  const g=new THREE.Group();
+  const baseM=new THREE.MeshStandardMaterial({color:0x3a3a3a,roughness:0.9});
+  const gunM=new THREE.MeshStandardMaterial({color:0x20242a,roughness:0.5,metalness:0.5});
   for(const b of BATTERIES){
     const y=gy(b.x,b.z);
-    const base=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.55,0.2,6), baseM);
+    const base=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.55,0.2,6),baseM);
     base.position.set(b.x,y+0.1,b.z); g.add(base);
-    const barrel=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,1.0,8), gunM);
-    barrel.rotation.x=Math.PI/2;            // 朝南（+z）
-    barrel.position.set(b.x,y+0.28,b.z+0.4); g.add(barrel);
+    const barrel=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,1.0,8),gunM);
+    barrel.rotation.x=Math.PI/2; barrel.position.set(b.x,y+0.28,b.z+0.4); g.add(barrel);
+  }
+  return g;
+}
+
+// ---------- 北岸碉堡線 ----------
+const PILLBOXES = [[-14,-9.5],[-11,-10.3],[-8,-10.7],[-5,-10.8],[-2,-11.4],[1,-11.4],
+  [3,-11],[5,-10.6],[7,-10.2],[9.5,-9.4],[11.5,-8.9],[14,-8.4]];
+export function buildPillboxes(){
+  const g=new THREE.Group();
+  const m=new THREE.MeshStandardMaterial({color:0x8a8478,roughness:0.95});
+  for(const [x,z] of PILLBOXES){
+    const yg=gy(x,z); if(yg<0.06) continue;
+    const box=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.18,0.16,6),m);
+    box.position.set(x,yg+0.08,z); box.rotation.y=Math.random(); g.add(box);
+  }
+  return g;
+}
+
+// ---------- 等高線（武吉知馬）----------
+export function buildContours(){
+  const g=new THREE.Group();
+  const cx=-2.5, cz=-3.0, A=3.3, sig=2.0, base=0.2;
+  const mat=new THREE.LineBasicMaterial({color:0xe8c270,transparent:true,opacity:0.5});
+  for(const lvl of [0.6,1.0,1.6,2.2,2.8]){
+    const k=(lvl-base)/A; if(k<=0||k>=1) continue;
+    const r=sig*Math.sqrt(-2*Math.log(k));
+    const pts=[];
+    for(let a=0;a<=64;a++){ const t=a/64*Math.PI*2;
+      pts.push(new THREE.Vector3(cx+Math.cos(t)*r, lvl+0.02, cz+Math.sin(t)*r)); }
+    g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat));
   }
   return g;
 }
 
 export function buildFeatures(coastlines){
-  const g = new THREE.Group();
+  const g=new THREE.Group();
   g.add(buildRoads());
+  g.add(buildRailway());
   g.add(buildRivers());
   g.add(buildRunways());
-  g.add(buildUrban());
+  g.add(buildPlantations());
   g.add(buildTrees());
+  g.add(buildTowns());
+  g.add(buildPillboxes());
   g.add(buildBatteries());
+  g.add(buildContours());
   g.add(buildCoastlines(coastlines));
   return g;
 }

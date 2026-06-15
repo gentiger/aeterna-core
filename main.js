@@ -283,11 +283,12 @@ toggle('tog-weather', v=>{ weatherOn=v; weatherFX.setEnabled(v); });
 toggle('tog-fire',    v=>{ fireOn=v; fireFX.enabled=v; });
 toggle('tog-cinema',  v=>{ cinema=v; });
 toggle('tog-labels',  v=>{ labelsOn=v; placeLabels.forEach(o=>o.visible=v); });
+toggle('tog-legend',  v=>{ $('legend').classList.toggle('hidden', !v); });
 
 // ---------------- 開場 ----------------
 $('start-btn').onclick = ()=>{
   $('intro').classList.add('gone');
-  ['topbar','info-panel','cam-panel','timeline','compass'].forEach(id=> $(id).classList.remove('hidden'));
+  ['topbar','info-panel','cam-panel','timeline','compass','legend'].forEach(id=> $(id).classList.remove('hidden'));
   setCam('overview');
   setPlaying(true);
 };
