@@ -23,8 +23,13 @@ export const PLACES = [
   { name:'亞歷山大', sub:'ALEXANDRA', x:-2.5, z:5 },
   { name:'新加坡市區', sub:'SINGAPORE CITY · 福特車廠/福康寧', x:3.5, z:7, major:true },
   { name:'加冷', sub:'KALLANG', x:7, z:6 },
-  { name:'勿洛', sub:'BEDOK', x:13, z:5 },
-  { name:'樟宜', sub:'CHANGI', x:19, z:-1, major:true },
+  { name:'勿洛', sub:'BEDOK', x:11.5, z:4.2 },
+  { name:'樟宜', sub:'CHANGI', x:17.5, z:-2.5, major:true },
+  { name:'柔佛海峽', sub:'JOHOR STRAIT', x:9, z:-13.2 },
+  { name:'新加坡海峽', sub:'SINGAPORE STRAIT', x:-2, z:10.5, major:true },
+  { name:'聖淘沙島', sub:'SENTOSA · P. BLAKANG MATI', x:1.5, z:8.7 },
+  { name:'烏敏島', sub:'PULAU UBIN', x:14, z:-11.4 },
+  { name:'中央集水區', sub:'CENTRAL CATCHMENT', x:0.3, z:-4.6 },
 ];
 
 // 軍/陣型 顏色
