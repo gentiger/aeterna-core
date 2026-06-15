@@ -33,6 +33,13 @@ export const PLACES = [
   { name:'新加坡河', sub:'SINGAPORE R.', x:2.3, z:5.0 },
   { name:'加冷河', sub:'KALLANG R.', x:5.9, z:2.6 },
   { name:'丹戎巴葛車站', sub:'TANJONG PAGAR · KTM 鐵路終點', x:1.6, z:7.3 },
+  { name:'駁船碼頭', sub:'BOAT QUAY', x:2.6, z:5.7 },
+  { name:'蔡厝港', sub:'CHOA CHU KANG', x:-7.5, z:-7.6 },
+  { name:'萬礼', sub:'MANDAI', x:-1.5, z:-8.2 },
+  { name:'義順', sub:'NEE SOON', x:2.6, z:-8.8 },
+  { name:'後港', sub:'HOUGANG', x:7.6, z:-3.4 },
+  { name:'荷蘭村', sub:'HOLLAND VILLAGE', x:-1.2, z:2.2 },
+  { name:'武吉知馬村', sub:'BUKIT TIMAH VILLAGE', x:-4.2, z:-3.6 },
 ];
 
 // 軍/陣型 顏色

@@ -56,13 +56,14 @@ const ROADS = [
   [[3,6.0],[-2,4],[-7,2.5],[-11,0],[-13,-2]],                // 裕廊路
 ];
 export function buildRoads(){
-  const g=new THREE.Group(), mat=flatMat(0x504a42);
-  for(const r of ROADS) g.add(ribbon(r, 0.28, mat, 0.05));
+  const g=new THREE.Group(), mat=flatMat(0x9b8a6b,{roughness:0.9});
+  for(const r of ROADS) g.add(ribbon(r, 0.36, mat, 0.085));
   return g;
 }
 
-// ---------- 鐵路（KTM 線 → 丹戎巴葛）----------
-const RAIL = [[-0.5,-12.5],[-1.6,-9.5],[-2.8,-6],[-2.6,-3.2],[-1.2,0.5],[0.4,3.6],[1.4,5.6],[2.0,7.0]];
+// ---------- 鐵路（KTM 線：沿武吉知馬西側 → 丹戎巴葛）----------
+const RAIL = [[-0.5,-12.5],[-1.8,-9.8],[-3.4,-7.4],[-4.7,-4.8],[-5.1,-2.2],
+  [-4.4,0.6],[-2.6,3.0],[-0.9,5.0],[0.6,6.4],[1.6,7.2]];
 export function buildRailway(){
   const g=new THREE.Group();
   g.add(ribbon(RAIL, 0.16, flatMat(0x6b6256), 0.055));        // 路基
@@ -152,20 +153,28 @@ export function buildTowns(){
       for(let i=0;i<6;i++) civic.push([t.x+(Math.random()-0.5)*3, gy(t.x,t.z), t.z+(Math.random()-0.5)*1.6]);
     }
   }
-  // 店屋（2–3 層，低矮）
+  // 店屋（2–3 層，低矮）+ 紅瓦屋頂
   const N=placements.length;
   const inst=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),
     new THREE.MeshStandardMaterial({roughness:0.9}), N);
+  const roofs=new THREE.InstancedMesh(new THREE.ConeGeometry(0.7,1,4),
+    new THREE.MeshStandardMaterial({roughness:0.85}), N);
   const d=new THREE.Object3D(), col=new THREE.Color();
+  const tiles=[0xb5582f,0xc56a3a,0x9e4a2a,0xa85636];
   placements.forEach(([x,yg,z],i)=>{
     const w=0.16+Math.random()*0.08, dep=0.16+Math.random()*0.08;
     const h=0.10+Math.random()*0.10;                    // 低層
-    d.position.set(x,yg+h/2,z); d.rotation.y=(Math.random()<0.5?0:Math.PI/2)+(Math.random()-0.5)*0.2;
-    d.scale.set(w,h,dep); d.updateMatrix(); inst.setMatrixAt(i,d.matrix);
+    const rot=(Math.random()<0.5?0:Math.PI/2)+(Math.random()-0.5)*0.2;
+    d.position.set(x,yg+h/2,z); d.rotation.y=rot; d.scale.set(w,h,dep);
+    d.updateMatrix(); inst.setMatrixAt(i,d.matrix);
     inst.setColorAt(i,col.setHex(walls[(Math.random()*walls.length)|0]));
+    d.position.set(x,yg+h+0.035,z); d.rotation.y=rot+Math.PI/4; d.scale.set(w*1.02,0.07,dep*1.02);
+    d.updateMatrix(); roofs.setMatrixAt(i,d.matrix);
+    roofs.setColorAt(i,col.setHex(tiles[(Math.random()*tiles.length)|0]));
   });
   inst.instanceMatrix.needsUpdate=true; if(inst.instanceColor) inst.instanceColor.needsUpdate=true;
-  g.add(inst);
+  roofs.instanceMatrix.needsUpdate=true; if(roofs.instanceColor) roofs.instanceColor.needsUpdate=true;
+  g.add(inst, roofs);
   // 殖民地標（略高、白色）
   if(civic.length){
     const ci=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),
@@ -278,19 +287,47 @@ export function buildPillboxes(){
   return g;
 }
 
-// ---------- 等高線（武吉知馬）----------
+// ---------- 等高線（武吉知馬，貼合實際山坡，避開水庫）----------
 export function buildContours(){
   const g=new THREE.Group();
-  const cx=-2.5, cz=-3.0, A=3.3, sig=2.0, base=0.2;
-  const mat=new THREE.LineBasicMaterial({color:0xe8c270,transparent:true,opacity:0.5});
-  for(const lvl of [0.6,1.0,1.6,2.2,2.8]){
-    const k=(lvl-base)/A; if(k<=0||k>=1) continue;
-    const r=sig*Math.sqrt(-2*Math.log(k));
-    const pts=[];
-    for(let a=0;a<=64;a++){ const t=a/64*Math.PI*2;
-      pts.push(new THREE.Vector3(cx+Math.cos(t)*r, lvl+0.02, cz+Math.sin(t)*r)); }
-    g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat));
+  const cx=-2.5, cz=-3.0;
+  const mat=new THREE.LineBasicMaterial({color:0xe8c270,transparent:true,opacity:0.55});
+  const STEPS=140;
+  for(const lvl of [0.8,1.3,1.8,2.3,2.8]){
+    // 沿各方位向外行進，找到高度降到該等高線的半徑（貼合真實地形）
+    const ring=[];
+    for(let a=0;a<=STEPS;a++){
+      const t=a/STEPS*Math.PI*2, c=Math.cos(t), s=Math.sin(t);
+      let found=null;
+      for(let r=0.2;r<=5.5;r+=0.12){
+        if(landHeight(cx+c*r, cz+s*r) <= lvl){ found=r; break; }
+      }
+      ring.push(found ? new THREE.Vector3(cx+c*found, lvl+0.03, cz+s*found) : null);
+    }
+    const pos=[];
+    for(let i=0;i<ring.length-1;i++){
+      const A=ring[i], B=ring[i+1];
+      if(A && B && A.distanceTo(B) < 1.2) pos.push(A.x,A.y,A.z, B.x,B.y,B.z);
+    }
+    if(pos.length){
+      const geo=new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+      g.add(new THREE.LineSegments(geo, mat));
+    }
   }
+  return g;
+}
+
+// ---------- 防線疊圖（與時間軸連動）----------
+const JURONG_LINE = [[-5.5,-10.2],[-6.0,-7.5],[-6.8,-5.0],[-8.0,-2.5],[-9.5,-0.5],[-11.0,1.5]];
+const PERIMETER   = [[-5.0,4.8],[-3.2,2.5],[-1.5,0.0],[0.5,-1.2],[3.0,-1.0],[5.5,0.2],[7.5,2.0],[8.8,4.0],[8.4,5.6]];
+export function buildDefenseLines(){
+  const lineMat = ()=> flatMat(0x73a9ff, { transparent:true, opacity:0.8,
+    emissive:0x1d4f8c, emissiveIntensity:0.5 });
+  const jurong = new THREE.Group();    jurong.add(ribbon(JURONG_LINE, 0.26, lineMat(), 0.11));
+  const perimeter = new THREE.Group(); perimeter.add(ribbon(PERIMETER, 0.26, lineMat(), 0.11));
+  const g = new THREE.Group(); g.add(jurong, perimeter);
+  g.userData = { jurong, perimeter };
   return g;
 }
 

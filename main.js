@@ -6,7 +6,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { PLACES, UNITS, PHASES, JP, UK } from './data.js';
 import { buildTerrain, animateWater, landHeight, COASTLINES } from './terrain.js';
-import { buildFeatures, BATTERIES } from './features.js';
+import { buildFeatures, BATTERIES, buildDefenseLines } from './features.js';
 import { makeFlagTexture } from './emblems.js';
 import { FireFX, WeatherFX } from './effects.js';
 
@@ -103,6 +103,21 @@ for(const b of BATTERIES){
   });
   scene.add(g);
 })();
+
+// 防線疊圖（與時間軸連動）
+const defense = buildDefenseLines();
+scene.add(defense);
+const jurLine = defense.userData.jurong, perLine = defense.userData.perimeter;
+jurLine.visible = perLine.visible = false;
+function overlayLabel(text, x, z){
+  const div = document.createElement('div');
+  div.className = 'place-label line-label';
+  div.textContent = text;
+  const o = new CSS2DObject(div); o.position.copy(worldPos(x, z, 1.4));
+  o.visible = false; scene.add(o); return o;
+}
+const jurLabel = overlayLabel('裕廊—克蘭芝防線', -8.5, -3.5);
+const perLabel = overlayLabel('最後防線・市區周界', 8.2, 3.0);
 
 // ---------------- 特效 ----------------
 const fireFX = new FireFX(scene);
@@ -322,6 +337,12 @@ function animate(){
   // 切幕事件
   const di = clamp(Math.round(phaseTime),0,LAST);
   if(di !== displayPhase){ displayPhase = di; updatePanel(di); setEventMarkers(di); }
+
+  // 防線疊圖：裕廊線(第2–3幕)、最後防線(第5幕起)
+  const showJur = phaseTime>0.5 && phaseTime<2.7;
+  const showPer = phaseTime>=3.4;
+  jurLine.visible = showJur; jurLabel.visible = showJur && labelsOn;
+  perLine.visible = showPer; perLabel.visible = showPer && labelsOn;
 
   // 天空 / 日照（依時間軸由夜入晝）
   const dayK = clamp(phaseTime/LAST, 0, 1);
