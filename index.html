@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>新加坡保衛戰 1942 — 3D 戰史運鏡 The Battle of Singapore</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- 3D 畫布 -->
+  <div id="scene-root"></div>
+  <div id="label-layer"></div>
+
+  <!-- 開場標題卡 -->
+  <div id="intro">
+    <div class="intro-inner">
+      <div class="intro-kicker">WAR HISTORY · 3D SPECIAL</div>
+      <h1>新加坡保衛戰</h1>
+      <h2>THE BATTLE OF SINGAPORE</h2>
+      <p class="intro-date">1942 · 2 月 8 日 — 2 月 15 日</p>
+      <p class="intro-sub">日本帝國陸軍第二十五軍　vs　大英國協馬來亞軍<br>
+        山下奉文 「馬來之虎」　vs　亞瑟・帕西瓦爾</p>
+      <div class="intro-legend">
+        <span class="lg red">● 日軍 Japanese</span>
+        <span class="lg blue">● 英軍 British / Commonwealth</span>
+      </div>
+      <button id="start-btn">▶　開始播放</button>
+      <p class="intro-hint">滑鼠拖曳旋轉視角 · 滾輪縮放 · 右鍵平移　|　Drag to orbit · Scroll to zoom</p>
+    </div>
+  </div>
+
+  <!-- 載入畫面 -->
+  <div id="loading"><div class="spinner"></div><span>建構戰場地形中…</span></div>
+
+  <!-- 頂部標題列 -->
+  <header id="topbar" class="hidden">
+    <div class="tb-title">新加坡保衛戰 <span>The Fall of Singapore</span></div>
+    <div class="tb-date" id="hud-date">1942 · 02 · 08</div>
+  </header>
+
+  <!-- 左側資訊面板 -->
+  <aside id="info-panel" class="hidden">
+    <div class="ip-phase" id="ip-phase">第一幕</div>
+    <h3 id="ip-title">日軍夜襲登陸</h3>
+    <p id="ip-desc"></p>
+    <div class="ip-events" id="ip-events"></div>
+
+    <div class="force-block">
+      <div class="force-row">
+        <span class="fr-name red">日軍 第25軍</span>
+        <span class="fr-num" id="jp-num">36,000</span>
+      </div>
+      <div class="bar"><div class="bar-fill red" id="jp-bar"></div></div>
+      <div class="force-row">
+        <span class="fr-name blue">英聯邦 馬來亞軍</span>
+        <span class="fr-num" id="uk-num">85,000</span>
+      </div>
+      <div class="bar"><div class="bar-fill blue" id="uk-bar"></div></div>
+    </div>
+  </aside>
+
+  <!-- 右側圖例 / 鏡頭控制 -->
+  <aside id="cam-panel" class="hidden">
+    <div class="cp-title">鏡頭 CAMERA</div>
+    <button class="cam-btn" data-cam="overview">🛰 戰場全景</button>
+    <button class="cam-btn" data-cam="landing">⚓ 西北登陸</button>
+    <button class="cam-btn" data-cam="bukit">⛰ 武吉知馬</button>
+    <button class="cam-btn" data-cam="city">🏙 市區防線</button>
+    <button class="cam-btn" data-cam="free">🎮 自由視角</button>
+    <div class="cp-title cp-sep">特效 FX</div>
+    <button class="tog-btn on" id="tog-weather">🌧 天氣</button>
+    <button class="tog-btn on" id="tog-fire">💥 槍炮</button>
+    <button class="tog-btn on" id="tog-cinema">🎬 電影運鏡</button>
+    <button class="tog-btn on" id="tog-labels">🏷 地名</button>
+  </aside>
+
+  <!-- 底部時間軸 -->
+  <footer id="timeline" class="hidden">
+    <div class="tl-controls">
+      <button id="btn-prev" title="上一幕">⏮</button>
+      <button id="btn-play" title="播放/暫停">⏸</button>
+      <button id="btn-next" title="下一幕">⏭</button>
+      <div class="speed">
+        <span>速度</span>
+        <input type="range" id="speed" min="0.25" max="2.5" step="0.25" value="1" />
+      </div>
+    </div>
+    <div class="tl-track">
+      <input type="range" id="scrub" min="0" max="6" step="0.001" value="0" />
+      <div class="tl-marks" id="tl-marks"></div>
+    </div>
+  </footer>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
