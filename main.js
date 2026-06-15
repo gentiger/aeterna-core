@@ -5,7 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { PLACES, UNITS, PHASES, JP, UK } from './data.js';
-import { buildTerrain, animateWater, landHeight } from './terrain.js';
+import { buildTerrain, animateWater, landHeight, COASTLINES } from './terrain.js';
+import { buildFeatures } from './features.js';
 import { makeFlagTexture } from './emblems.js';
 import { FireFX, WeatherFX } from './effects.js';
 
@@ -56,6 +57,9 @@ scene.background = skyA.clone();
 const terrain = buildTerrain();
 scene.add(terrain);
 const water = terrain.userData.water;
+
+// 地圖要素：海岸線、跑道、市區、道路
+scene.add(buildFeatures(COASTLINES));
 const groundY = (x,z)=> Math.max(landHeight(x,z), 0.02);
 const worldPos = (x,z,lift=0.06)=> new THREE.Vector3(x, groundY(x,z)+lift, z);
 

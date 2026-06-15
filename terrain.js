@@ -35,6 +35,9 @@ const TEKONG  = [[17,-10.6],[19.5,-10.9],[20.6,-9.6],[18.5,-9.2],[17,-9.8]];  //
 
 const LAND_POLYS = [SINGAPORE, JOHOR, CAUSEWAY, SENTOSA, UBIN, TEKONG];
 
+// 供其他模組描繪海岸線
+export const COASTLINES = [SINGAPORE, JOHOR, SENTOSA, UBIN, TEKONG];
+
 // 內陸水庫（1942 已存在：中央集水區/麥里芝、實里達）
 const RES_CENTRAL = [[-1.5,-2.5],[0,-3.1],[1.6,-2.2],[1.9,-0.8],[0.8,0.3],[-0.9,0.1],[-1.9,-1.2]];
 const RES_SELETAR = [[2.0,-7.6],[3.6,-7.8],[4.3,-6.8],[3.4,-6.0],[2.1,-6.4]];
@@ -74,8 +77,8 @@ function elevation(x,z){
     // 海床：近岸淺、遠岸深
     h = -0.05 - smooth(0,-3.0,sd)*1.7;
   } else {
-    // 陸地：海灘 → 內陸緩升
-    h = 0.05 + smooth(0,0.45,sd)*0.16 + Math.max(0,sd-0.45)*0.05;
+    // 陸地：海灘 → 內陸緩升（較窄的海灘帶 → 海岸更銳利）
+    h = 0.06 + smooth(0,0.22,sd)*0.16 + Math.max(0,sd-0.22)*0.05;
     const land = smooth(0,0.6,sd);        // 海岸淡入丘陵
     h += gauss(x,z,-2.5,-3.0, 3.3, 2.2)*land;   // 武吉知馬高地 163m
     h += gauss(x,z,-4.6,-6.0, 1.7, 1.6)*land;   // 武吉班讓
@@ -110,7 +113,7 @@ function terrainColor(h, sd, reservoir){
 
 export function buildTerrain(){
   const group = new THREE.Group();
-  const Wd=120, Dp=80, segW=300, segD=200;
+  const Wd=120, Dp=80, segW=384, segD=256;
   const geo = new THREE.PlaneGeometry(Wd,Dp,segW,segD);
   geo.rotateX(-Math.PI/2);
   const pos = geo.attributes.position;
