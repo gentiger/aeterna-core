@@ -12,15 +12,18 @@ import { FireFX, WeatherFX } from './effects.js';
 
 // ---------------- 基礎場景 ----------------
 const root = document.getElementById('scene-root');
+const isMobile = matchMedia('(max-width: 820px)').matches ||
+  (('ontouchstart' in window) && Math.min(window.innerWidth, window.innerHeight) < 820);
+
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0x12233f, 60, 165);
 
 const camera = new THREE.PerspectiveCamera(52, innerWidth/innerHeight, 0.5, 600);
 camera.position.set(0, 72, 48);
 
-const renderer = new THREE.WebGLRenderer({ antialias:true });
+const renderer = new THREE.WebGLRenderer({ antialias: !isMobile });
 renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.5 : 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 root.appendChild(renderer.domElement);
 
@@ -55,7 +58,7 @@ const skyB = new THREE.Color(0x8aa0bb);  // 晝（陰）
 scene.background = skyA.clone();
 
 // ---------------- 地形 ----------------
-const terrain = buildTerrain();
+const terrain = buildTerrain(isMobile);
 scene.add(terrain);
 const water = terrain.userData.water;
 
@@ -121,7 +124,7 @@ const perLabel = overlayLabel('Final Perimeter · City', 8.2, 3.0);
 
 // ---------------- 特效 ----------------
 const fireFX = new FireFX(scene);
-const weatherFX = new WeatherFX(scene);
+const weatherFX = new WeatherFX(scene, isMobile ? 2500 : 7000);
 
 // ---------------- 軍勢單位（含家紋軍旗）----------------
 const POLE_H = 3.7;
@@ -304,9 +307,15 @@ toggle('tog-legend',  v=>{ $('legend').classList.toggle('hidden', !v); });
 $('start-btn').onclick = ()=>{
   $('intro').classList.add('gone');
   ['topbar','info-panel','cam-panel','timeline','compass','legend'].forEach(id=> $(id).classList.remove('hidden'));
+  if(isMobile){ // 行動裝置：預設收合資訊面板、關閉圖例以省空間
+    $('info-panel').classList.add('collapsed');
+    $('legend').classList.add('hidden');
+    $('tog-legend').classList.remove('on');
+  }
   setCam('overview');
   setPlaying(true);
 };
+$('ip-toggle').onclick = ()=> $('info-panel').classList.toggle('collapsed');
 
 // ---------------- 主迴圈 ----------------
 const clock = new THREE.Clock();

@@ -143,9 +143,10 @@ function landcover(x,z,h,sd,reservoir){
   return c;
 }
 
-export function buildTerrain(){
+export function buildTerrain(lowDetail=false){
   const group = new THREE.Group();
-  const Wd=120, Dp=80, segW=384, segD=256;
+  const Wd=120, Dp=80;
+  const segW = lowDetail?260:384, segD = lowDetail?176:256;
   const geo = new THREE.PlaneGeometry(Wd,Dp,segW,segD);
   geo.rotateX(-Math.PI/2);
   const pos = geo.attributes.position;

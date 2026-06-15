@@ -113,9 +113,9 @@ export class FireFX {
 
 // ---------------- 天氣：雨 + 閃電 ----------------
 export class WeatherFX {
-  constructor(scene){
+  constructor(scene, count=7000){
     this.scene=scene; this.enabled=true;
-    const N=7000; this.N=N;
+    const N=count; this.N=N;
     const arr=new Float32Array(N*3); this.vel=new Float32Array(N);
     for(let i=0;i<N;i++){
       arr[i*3]=(Math.random()-0.5)*120;

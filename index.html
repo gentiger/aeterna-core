@@ -25,7 +25,7 @@
         <span class="lg blue">● British / Commonwealth</span>
       </div>
       <button id="start-btn">▶　PLAY</button>
-      <p class="intro-hint">Drag to orbit · Scroll to zoom · Right-drag to pan</p>
+      <p class="intro-hint">Drag / one finger to orbit · Scroll or pinch to zoom · Right-drag / two fingers to pan</p>
     </div>
   </div>
 
@@ -40,39 +40,46 @@
 
   <!-- 左側資訊面板 -->
   <aside id="info-panel" class="hidden">
-    <div class="ip-phase" id="ip-phase">Act I</div>
-    <h3 id="ip-title">Night Landing</h3>
-    <p id="ip-desc"></p>
-    <div class="ip-events" id="ip-events"></div>
+    <div class="ip-head">
+      <div>
+        <div class="ip-phase" id="ip-phase">Act I</div>
+        <h3 id="ip-title">Night Landing</h3>
+      </div>
+      <button class="ip-toggle" id="ip-toggle" aria-label="Collapse">▾</button>
+    </div>
+    <div class="ip-body" id="ip-body">
+      <p id="ip-desc"></p>
+      <div class="ip-events" id="ip-events"></div>
 
-    <div class="force-block">
-      <div class="force-row">
-        <span class="fr-name red">Japanese · 25th Army</span>
-        <span class="fr-num" id="jp-num">36,000</span>
+      <div class="force-block">
+        <div class="force-row">
+          <span class="fr-name red">Japanese · 25th Army</span>
+          <span class="fr-num" id="jp-num">36,000</span>
+        </div>
+        <div class="bar"><div class="bar-fill red" id="jp-bar"></div></div>
+        <div class="force-row">
+          <span class="fr-name blue">Commonwealth · Malaya Cmd</span>
+          <span class="fr-num" id="uk-num">85,000</span>
+        </div>
+        <div class="bar"><div class="bar-fill blue" id="uk-bar"></div></div>
       </div>
-      <div class="bar"><div class="bar-fill red" id="jp-bar"></div></div>
-      <div class="force-row">
-        <span class="fr-name blue">Commonwealth · Malaya Cmd</span>
-        <span class="fr-num" id="uk-num">85,000</span>
-      </div>
-      <div class="bar"><div class="bar-fill blue" id="uk-bar"></div></div>
     </div>
   </aside>
 
   <!-- 右側圖例 / 鏡頭控制 -->
   <aside id="cam-panel" class="hidden">
     <div class="cp-title">CAMERA</div>
-    <button class="cam-btn" data-cam="overview">🛰 Overview</button>
-    <button class="cam-btn" data-cam="landing">⚓ NW Landing</button>
-    <button class="cam-btn" data-cam="bukit">⛰ Bukit Timah</button>
-    <button class="cam-btn" data-cam="city">🏙 City Line</button>
-    <button class="cam-btn" data-cam="free">🎮 Free</button>
+    <button class="cam-btn" data-cam="overview"><span class="ic">🛰</span><span class="lbl">Overview</span></button>
+    <button class="cam-btn" data-cam="landing"><span class="ic">⚓</span><span class="lbl">NW Landing</span></button>
+    <button class="cam-btn" data-cam="bukit"><span class="ic">⛰</span><span class="lbl">Bukit Timah</span></button>
+    <button class="cam-btn" data-cam="city"><span class="ic">🏙</span><span class="lbl">City Line</span></button>
+    <button class="cam-btn" data-cam="free"><span class="ic">🎮</span><span class="lbl">Free</span></button>
     <div class="cp-title cp-sep">EFFECTS</div>
-    <button class="tog-btn on" id="tog-weather">🌧 Weather</button>
-    <button class="tog-btn on" id="tog-fire">💥 Gunfire</button>
-    <button class="tog-btn on" id="tog-cinema">🎬 Cinematic</button>
-    <button class="tog-btn on" id="tog-labels">🏷 Labels</button>
-    <button class="tog-btn on" id="tog-legend">🗺 Legend</button>
+    <button class="tog-btn on" id="tog-weather"><span class="ic">🌧</span><span class="lbl">Weather</span></button>
+    <button class="tog-btn on" id="tog-fire"><span class="ic">💥</span><span class="lbl">Gunfire</span></button>
+    <button class="tog-btn on" id="tog-cinema"><span class="ic">🎬</span><span class="lbl">Cinematic</span></button>
+    <button class="tog-btn on" id="tog-labels"><span class="ic">🏷</span><span class="lbl">Labels</span></button>
+    <button class="tog-btn on" id="tog-legend"><span class="ic">🗺</span><span class="lbl">Legend</span></button>
   </aside>
 
   <!-- 圖例 -->
