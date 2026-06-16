@@ -273,9 +273,11 @@ const CAMS = {
   city:    { pos:new THREE.Vector3(14,15,27),  tgt:new THREE.Vector3(3.5,0,7) },
 };
 let camTween = null;
+let freeMode = false;
 function setCam(name){
   document.querySelectorAll('.cam-btn').forEach(b=>b.classList.toggle('active', b.dataset.cam===name));
-  if(name==='free'){ camTween=null; controls.autoRotate=false; return; }
+  if(name==='free'){ camTween=null; freeMode=true; controls.autoRotate=false; return; }
+  freeMode = false;
   const c = CAMS[name];
   camTween = { pos:c.pos.clone(), tgt:c.tgt.clone(), k:0 };
   controls.autoRotate = false;
@@ -423,10 +425,11 @@ function animate(){
   animateWater(water, t);
 
   // 電影運鏡
-  controls.autoRotate = cinema && playing && !camTween;
-  controls.autoRotateSpeed = 0.35;
-  if(cinema && playing && !camTween){
-    controls.target.lerp(frontLineCenter().setY(0.5), 0.012);
+  // 預設運鏡：只要開啟電影運鏡、未拖曳、未鎖定預設視角即持續環繞（不受播放狀態影響）
+  controls.autoRotate = cinema && !camTween && !freeMode;
+  controls.autoRotateSpeed = 0.5;
+  if(cinema && playing && !camTween && !freeMode){
+    controls.target.lerp(frontLineCenter().setY(0.5), 0.012);   // 播放時鏡頭跟隨戰線
   }
   // 鏡頭過場
   if(camTween){
