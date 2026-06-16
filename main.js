@@ -19,7 +19,7 @@ const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0x12233f, 60, 165);
 
 const camera = new THREE.PerspectiveCamera(52, innerWidth/innerHeight, 0.5, 600);
-camera.position.set(0, 72, 48);
+camera.position.set(-2, 54, 38);
 
 const renderer = new THREE.WebGLRenderer({ antialias: !isMobile });
 renderer.setSize(innerWidth, innerHeight);
@@ -40,7 +40,7 @@ controls.dampingFactor = 0.06;
 controls.maxPolarAngle = Math.PI*0.49;
 controls.minDistance = 8;
 controls.maxDistance = 160;
-controls.target.set(-1, 0, -2);
+controls.target.set(-2, 0, -3);
 const compassRing = document.querySelector('#compass .cmp-ring');
 
 // ---------------- 燈光 ----------------
@@ -67,16 +67,29 @@ scene.add(buildFeatures(COASTLINES));
 const groundY = (x,z)=> Math.max(landHeight(x,z), 0.02);
 const worldPos = (x,z,lift=0.06)=> new THREE.Vector3(x, groundY(x,z)+lift, z);
 
+// ---------------- 標籤管理（去重疊 + 距離 LOD）----------------
+const managedLabels = [];
+const KIND = {
+  major:  { prio:2, maxD:240 },
+  minor:  { prio:4, maxD:58  },
+  unit:   { prio:1, maxD:170 },
+  battery:{ prio:3, maxD:95  },
+  overlay:{ prio:0, maxD:240 },
+};
+function registerLabel(obj, el, kind, gate){
+  const k = KIND[kind];
+  managedLabels.push({ obj, el, kind, prio:k.prio, maxD:k.maxD, gate, w:90, h:26, near:false });
+}
+
 // ---------------- 地名標籤 ----------------
-const placeLabels = [];
 for(const p of PLACES){
   const div = document.createElement('div');
   div.className = 'place-label' + (p.major?' major':'');
-  div.innerHTML = `${p.name}<span class="sub">${p.sub}</span>`;
+  div.innerHTML = `${p.name}` + (p.sub?`<span class="sub">${p.sub}</span>`:'');
   const obj = new CSS2DObject(div);
   obj.position.copy(worldPos(p.x, p.z, p.major?1.4:0.8));
   scene.add(obj);
-  placeLabels.push(obj);
+  registerLabel(obj, div, p.major?'major':'minor', ()=>labelsOn);
 }
 
 // 海岸炮台標籤
@@ -86,7 +99,8 @@ for(const b of BATTERIES){
   div.innerHTML = `⌖ ${b.name}<span class="sub">${b.sub}</span>`;
   const obj = new CSS2DObject(div);
   obj.position.copy(worldPos(b.x, b.z, 1.0));
-  scene.add(obj); placeLabels.push(obj);
+  scene.add(obj);
+  registerLabel(obj, div, 'battery', ()=>labelsOn);
 }
 
 // 比例尺（10 公里）
@@ -112,15 +126,18 @@ const defense = buildDefenseLines();
 scene.add(defense);
 const jurLine = defense.userData.jurong, perLine = defense.userData.perimeter;
 jurLine.visible = perLine.visible = false;
-function overlayLabel(text, x, z){
+let showJur = false, showPer = false;
+function overlayLabel(text, x, z, gate){
   const div = document.createElement('div');
   div.className = 'place-label line-label';
   div.textContent = text;
   const o = new CSS2DObject(div); o.position.copy(worldPos(x, z, 1.4));
-  o.visible = false; scene.add(o); return o;
+  o.visible = false; scene.add(o);
+  registerLabel(o, div, 'overlay', gate);
+  return o;
 }
-const jurLabel = overlayLabel('Jurong–Kranji Line', -8.5, -3.5);
-const perLabel = overlayLabel('Final Perimeter · City', 8.2, 3.0);
+overlayLabel('Jurong–Kranji Line', -8.5, -3.5, ()=> labelsOn && showJur);
+overlayLabel('Final Perimeter · City', 8.2, 3.0, ()=> labelsOn && showPer);
 
 // ---------------- 特效 ----------------
 const fireFX = new FireFX(scene);
@@ -196,6 +213,7 @@ for(const u of UNITS){
   const label = new CSS2DObject(ldiv);
   label.position.set(0, POLE_H + 1.5, 0);
   grp.add(label);
+  registerLabel(label, ldiv, 'unit', ()=> labelsOn && grp.visible);
 
   scene.add(grp);
   units.push({ data:u, grp, flag, flagGeo, flagBase, fw, label,
@@ -267,7 +285,7 @@ PHASES.forEach((p,i)=>{
 
 // ---------------- 鏡頭預設 ----------------
 const CAMS = {
-  overview:{ pos:new THREE.Vector3(0,72,48),   tgt:new THREE.Vector3(-1,0,-2) },
+  overview:{ pos:new THREE.Vector3(-2,54,38),  tgt:new THREE.Vector3(-2,0,-3) },
   landing: { pos:new THREE.Vector3(-34,17,-2), tgt:new THREE.Vector3(-13,1,-10) },
   bukit:   { pos:new THREE.Vector3(-2,12,17),  tgt:new THREE.Vector3(-2.5,2.5,-3) },
   city:    { pos:new THREE.Vector3(14,15,27),  tgt:new THREE.Vector3(3.5,0,7) },
@@ -302,7 +320,7 @@ function toggle(btn, set){
 toggle('tog-weather', v=>{ weatherOn=v; weatherFX.setEnabled(v); });
 toggle('tog-fire',    v=>{ fireOn=v; fireFX.enabled=v; });
 toggle('tog-cinema',  v=>{ cinema=v; });
-toggle('tog-labels',  v=>{ labelsOn=v; placeLabels.forEach(o=>o.visible=v); });
+toggle('tog-labels',  v=>{ labelsOn=v; });
 toggle('tog-legend',  v=>{ $('legend').classList.toggle('hidden', !v); });
 
 // ---------------- 開場 ----------------
@@ -333,6 +351,39 @@ function frontLineCenter(){
   return c.multiplyScalar(1/n);
 }
 
+// 標籤去重疊：依優先度與距離挑選不互相覆蓋的標籤顯示
+const _wp = new THREE.Vector3(), _sp = new THREE.Vector3();
+function declutterLabels(){
+  const W = innerWidth, H = innerHeight;
+  // 量測目前可見標籤的實際尺寸（首次渲染後才有值）
+  for(const L of managedLabels){ if(L.el.offsetWidth){ L.w=L.el.offsetWidth+6; L.h=L.el.offsetHeight+4; } }
+  const cand = [];
+  for(const L of managedLabels){
+    if(!L.gate()){ L.obj.visible=false; continue; }
+    L.obj.getWorldPosition(_wp);
+    const d = _wp.distanceTo(camera.position);
+    if(d > L.maxD){ L.obj.visible=false; continue; }
+    _sp.copy(_wp).project(camera);
+    if(_sp.z>1 || _sp.x<-1.2||_sp.x>1.2 || _sp.y<-1.2||_sp.y>1.2){ L.obj.visible=false; continue; }
+    cand.push({ L, sx:(_sp.x*0.5+0.5)*W, sy:(-_sp.y*0.5+0.5)*H, d });
+  }
+  cand.sort((a,b)=> (a.L.prio-b.L.prio) || (a.d-b.d));
+  const placed = [];
+  for(const c of cand){
+    const L = c.L;
+    if(L.kind==='unit'){
+      const near = c.d < 40;
+      if(near !== L.near){ L.near = near; L.el.classList.toggle('near', near); }
+    }
+    let ok = true;
+    for(const p of placed){
+      if(Math.abs(c.sx-p.sx) < (L.w+p.w)*0.5+2 && Math.abs(c.sy-p.sy) < (L.h+p.h)*0.5+2){ ok=false; break; }
+    }
+    L.obj.visible = ok;
+    if(ok) placed.push({ sx:c.sx, sy:c.sy, w:L.w, h:L.h });
+  }
+}
+
 function animate(){
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -350,10 +401,10 @@ function animate(){
   if(di !== displayPhase){ displayPhase = di; updatePanel(di); setEventMarkers(di); }
 
   // 防線疊圖：裕廊線(第2–3幕)、最後防線(第5幕起)
-  const showJur = phaseTime>0.5 && phaseTime<2.7;
-  const showPer = phaseTime>=3.4;
-  jurLine.visible = showJur; jurLabel.visible = showJur && labelsOn;
-  perLine.visible = showPer; perLabel.visible = showPer && labelsOn;
+  showJur = phaseTime>0.5 && phaseTime<2.7;
+  showPer = phaseTime>=3.4;
+  jurLine.visible = showJur;
+  perLine.visible = showPer;
 
   // 天空 / 日照（依時間軸由夜入晝）
   const dayK = clamp(phaseTime/LAST, 0, 1);
@@ -368,7 +419,7 @@ function animate(){
   for(const U of units){
     const u = U.data;
     const visible = phaseTime >= u.appear - 0.5;
-    U.grp.visible = visible; U.label.visible = visible && labelsOn;
+    U.grp.visible = visible;
     if(!visible){ U.arrow.grp.visible=false; continue; }
     const [x,z] = unitPosAt(u, phaseTime);
     const wp = worldPos(x, z, 0);
@@ -444,6 +495,7 @@ function animate(){
   // 指南針：依鏡頭方位旋轉
   if(compassRing) compassRing.style.transform = `rotate(${-controls.getAzimuthalAngle()}rad)`;
   renderer.render(scene, camera);
+  declutterLabels();              // 在主渲染後（矩陣已更新）再做標籤去重疊
   labelRenderer.render(scene, camera);
 }
 
